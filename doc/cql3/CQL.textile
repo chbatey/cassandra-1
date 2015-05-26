@@ -1422,6 +1422,7 @@ Note that you can use the double-quoted string syntax to enclose the UDF source 
 
 bc(sample).. 
 CREATE FUNCTION some_function ( arg int )
+  RETURNS NULL ON NULL INPUT
   RETURNS int
   LANGUAGE java
   AS $$ return arg; $$;
@@ -1431,7 +1432,7 @@ UPDATE atable SET col = some_function(?) ...;
 p. 
 
 bc(sample). 
-CREATE TYPE custom_type (txt text, i int);
+CREATE TABLE custom_type (txt text, i int);
 CREATE FUNCTION fct_using_udt ( udtarg frozen<customType> )
   RETURNS text
   LANGUAGE java
