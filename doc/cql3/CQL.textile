@@ -1811,7 +1811,7 @@ will never return any result by design, since the value returned by @now()@ is g
 h4. @minTimeuuid@ and @maxTimeuuid@
 
 The @minTimeuuid@ (resp. @maxTimeuuid@) function takes a @timestamp@ value @t@ (which can be "either a timestamp or a date string":#usingtimestamps ) and return a _fake_ @timeuuid@ corresponding to the _smallest_ (resp. _biggest_) possible @timeuuid@ having for timestamp @t@. So for instance:
- 
+
 bc(sample). 
 SELECT * FROM myTable WHERE t > maxTimeuuid('2013-01-01 00:05+0000') AND t < minTimeuuid('2013-02-02 10:00+0000')
  
@@ -1866,7 +1866,7 @@ h3(#sumFct). Sum
 
 The @sum@ function can be used to sum up all the values returned by a query for a given column.
 
-h3(#sumFct). Avg
+h3(#avgFct). Avg
 
 The @avg@ function can be used to compute the average of all the values returned by a query for a given column.
 
