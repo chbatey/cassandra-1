@@ -19,8 +19,10 @@ package org.apache.cassandra.cql3.functions;
 
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Objects;
+import com.google.common.base.Stopwatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +37,7 @@ import org.apache.cassandra.exceptions.*;
 import org.apache.cassandra.schema.Functions;
 import org.apache.cassandra.schema.KeyspaceMetadata;
 import org.apache.cassandra.service.MigrationManager;
+import org.apache.cassandra.tracing.Tracing;
 import org.apache.cassandra.utils.ByteBufferUtil;
 
 /**
@@ -141,7 +144,11 @@ public abstract class UDFunction extends AbstractFunction implements ScalarFunct
 
         if (!isCallableWrtNullable(parameters))
             return null;
-        return executeUserDefined(protocolVersion, parameters);
+
+        Stopwatch stopwatch = Stopwatch.createStarted();
+        ByteBuffer result = executeUserDefined(protocolVersion, parameters);
+        Tracing.trace("Executed UDF {} in {}\u03bcs", name(), stopwatch.stop().elapsed(TimeUnit.MICROSECONDS));
+        return result;
     }
 
     public boolean isCallableWrtNullable(List<ByteBuffer> parameters)
