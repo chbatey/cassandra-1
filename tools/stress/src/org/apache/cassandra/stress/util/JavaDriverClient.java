@@ -24,6 +24,7 @@ import javax.net.ssl.SSLContext;
 
 import com.datastax.driver.core.*;
 import com.datastax.driver.core.policies.DCAwareRoundRobinPolicy;
+import com.datastax.driver.core.policies.LoadBalancingPolicy;
 import com.datastax.driver.core.policies.WhiteListPolicy;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Slf4JLoggerFactory;
@@ -50,7 +51,7 @@ public class JavaDriverClient
     private final EncryptionOptions.ClientEncryptionOptions encryptionOptions;
     private Cluster cluster;
     private Session session;
-    private final WhiteListPolicy whitelist;
+    private final LoadBalancingPolicy loadBalancingPolicy;
 
     private static final ConcurrentMap<String, PreparedStatement> stmts = new ConcurrentHashMap<>();
 
@@ -68,9 +69,19 @@ public class JavaDriverClient
         this.authProvider = settings.mode.authProvider;
         this.encryptionOptions = encryptionOptions;
         if (settings.node.isWhiteList)
-            whitelist = new WhiteListPolicy(DCAwareRoundRobinPolicy.builder().build(), settings.node.resolveAll(settings.port.nativePort));
+        {
+            DCAwareRoundRobinPolicy.Builder lbPolicy = DCAwareRoundRobinPolicy.builder();
+            if (settings.node.datacenter != null) {
+                lbPolicy.withLocalDc(settings.node.datacenter);
+            }
+            loadBalancingPolicy = new WhiteListPolicy(lbPolicy.build(), settings.node.resolveAll(settings.port.nativePort));
+        } else if (settings.node.datacenter != null) {
+            System.out.println("Using local datacenter " + settings.node.datacenter);
+            loadBalancingPolicy = DCAwareRoundRobinPolicy.builder().withLocalDc(settings.node.datacenter).build();
+        }
         else
-            whitelist = null;
+            loadBalancingPolicy = null;
+
         connectionsPerHost = settings.mode.connectionsPerHost == null ? 8 : settings.mode.connectionsPerHost;
 
         int maxThreadCount = 0;
@@ -117,8 +128,8 @@ public class JavaDriverClient
                                                 .withoutJMXReporting()
                                                 .withProtocolVersion(ProtocolVersion.NEWEST_SUPPORTED)
                                                 .withoutMetrics(); // The driver uses metrics 3 with conflict with our version
-        if (whitelist != null)
-            clusterBuilder.withLoadBalancingPolicy(whitelist);
+        if (loadBalancingPolicy != null)
+            clusterBuilder.withLoadBalancingPolicy(loadBalancingPolicy);
         clusterBuilder.withCompression(compression);
         if (encryptionOptions.enabled)
         {
