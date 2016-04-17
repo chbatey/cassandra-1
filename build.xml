@@ -793,12 +793,32 @@
 
     <!-- Stress build file -->
     <property name="stress.build.src" value="${basedir}/tools/stress/src" />
+    <property name="stress.test.src" value="${basedir}/tools/stress/test/unit" />
     <property name="stress.build.classes" value="${build.classes}/stress" />
 	<property name="stress.manifest" value="${stress.build.classes}/MANIFEST.MF" />
     <path id="cassandra.classes">
         <pathelement location="${basedir}/build/classes/main" />
         <pathelement location="${basedir}/build/classes/thrift" />
     </path>
+
+    <target name="stress-build-test" depends="stress-build" description="Compile stress tests">
+     <javac
+     debug="true"
+     debuglevel="${debuglevel}"
+     destdir="${test.classes}"
+     includeantruntime="false"
+     source="${source.version}"
+     target="${target.version}"
+     encoding="utf-8">
+     <classpath>
+        <path refid="cassandra.classpath"/>
+         <pathelement location="${stress.build.classes}" />
+     </classpath>
+     <src path="${stress.test.src}"/>
+    </javac>
+
+    </target>
+
     <target name="stress-build" depends="build" description="build stress tool">
     	<mkdir dir="${stress.build.classes}" />
         <javac debug="true" debuglevel="${debuglevel}" encoding="utf-8" destdir="${stress.build.classes}" includeantruntime="true" source="${source.version}" target="${target.version}">
@@ -815,6 +835,12 @@
         <copy todir="${stress.build.classes}">
             <fileset dir="${stress.build.src}/resources" />
         </copy>
+    </target>
+
+    <target name="stress-test" depends="stress-build-test, build-test" description="Runs stress tests">
+        <testmacro inputdir="${stress.test.src}"
+                       timeout="${test.timeout}">
+        </testmacro>
     </target>
 
 	<target name="_write-poms" depends="maven-declare-dependencies">
@@ -1201,9 +1227,10 @@
         <jvmarg value="-Djava.security.egd=file:/dev/urandom" />
         <jvmarg value="-Dcassandra.testtag=@{testtag}"/>
         <jvmarg value="-Dcassandra.keepBriefBrief=${cassandra.keepBriefBrief}" />
-	<optjvmargs/>
+        <optjvmargs/>
         <classpath>
           <pathelement path="${java.class.path}"/>
+          <pathelement location="${stress.build.classes}"/>
           <path refid="cassandra.classpath" />
           <pathelement location="${test.classes}"/>
           <pathelement location="${test.conf}"/>
