@@ -187,6 +187,7 @@
         <mkdir dir="${build.classes.thrift}"/>
         <mkdir dir="${test.lib}"/>
         <mkdir dir="${test.classes}"/>
+        <mkdir dir="${stress.test.classes}"/>
         <mkdir dir="${build.src.gen-java}"/>
         <mkdir dir="${build.dir.lib}"/>
         <mkdir dir="${jacoco.export.dir}"/>
@@ -793,12 +794,33 @@
 
     <!-- Stress build file -->
     <property name="stress.build.src" value="${basedir}/tools/stress/src" />
+    <property name="stress.test.src" value="${basedir}/tools/stress/test/unit" />
     <property name="stress.build.classes" value="${build.classes}/stress" />
+    <property name="stress.test.classes" value="${build.dir}/test/stress-classes" />
 	<property name="stress.manifest" value="${stress.build.classes}/MANIFEST.MF" />
     <path id="cassandra.classes">
         <pathelement location="${basedir}/build/classes/main" />
         <pathelement location="${basedir}/build/classes/thrift" />
     </path>
+
+    <target name="stress-build-test" depends="stress-build" description="Compile stress tests">
+     <javac
+     debug="true"
+     debuglevel="${debuglevel}"
+     destdir="${stress.test.classes}"
+     includeantruntime="false"
+     source="${source.version}"
+     target="${target.version}"
+     encoding="utf-8">
+     <classpath>
+        <path refid="cassandra.classpath"/>
+         <pathelement location="${stress.build.classes}" />
+     </classpath>
+     <src path="${stress.test.src}"/>
+    </javac>
+
+    </target>
+
     <target name="stress-build" depends="build" description="build stress tool">
     	<mkdir dir="${stress.build.classes}" />
         <javac debug="true" debuglevel="${debuglevel}" encoding="utf-8" destdir="${stress.build.classes}" includeantruntime="true" source="${source.version}" target="${target.version}">
@@ -815,6 +837,12 @@
         <copy todir="${stress.build.classes}">
             <fileset dir="${stress.build.src}/resources" />
         </copy>
+    </target>
+
+    <target name="stress-test" depends="stress-build-test, build-test" description="Runs stress tests">
+        <testmacro inputdir="${stress.test.src}"
+                       timeout="${test.timeout}">
+        </testmacro>
     </target>
 
 	<target name="_write-poms" depends="maven-declare-dependencies">
@@ -1204,8 +1232,10 @@
 	<optjvmargs/>
         <classpath>
           <pathelement path="${java.class.path}"/>
+          <pathelement location="${stress.build.classes}"/>
           <path refid="cassandra.classpath" />
           <pathelement location="${test.classes}"/>
+          <pathelement location="${stress.test.classes}"/>
           <pathelement location="${test.conf}"/>
           <fileset dir="${test.lib}">
             <include name="**/*.jar" />
