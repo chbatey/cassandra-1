@@ -28,6 +28,7 @@ import org.apache.cassandra.db.marshal.Int32Type;
 import org.apache.cassandra.db.marshal.LongType;
 import org.apache.cassandra.exceptions.InvalidRequestException;
 import org.apache.cassandra.serializers.MarshalException;
+import org.apache.cassandra.tracing.Tracing;
 import org.apache.cassandra.utils.ByteBufferUtil;
 
 /**
@@ -76,8 +77,10 @@ public class Attributes
 
     public long getTimestamp(long now, QueryOptions options) throws InvalidRequestException
     {
-        if (timestamp == null)
+        if (timestamp == null) {
+            Tracing.trace("Using {} generated timestamp for mutation: {} ", options.isClientGeneratedTimestap() ? "client" : "server", now);
             return now;
+        }
 
         ByteBuffer tval = timestamp.bindAndGet(options);
         if (tval == null)
@@ -95,7 +98,9 @@ public class Attributes
             throw new InvalidRequestException("Invalid timestamp value: " + tval);
         }
 
-        return LongType.instance.compose(tval);
+        Long clientTimestamp = LongType.instance.compose(tval);
+        Tracing.trace("Using client generated timestamp for mutation: {}", clientTimestamp);
+        return clientTimestamp;
     }
 
     public int getTimeToLive(QueryOptions options, int defaultTimeToLive) throws InvalidRequestException

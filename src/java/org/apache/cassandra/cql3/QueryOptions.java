@@ -73,7 +73,7 @@ public abstract class QueryOptions
 
     public static QueryOptions create(ConsistencyLevel consistency, List<ByteBuffer> values, boolean skipMetadata, int pageSize, PagingState pagingState, ConsistencyLevel serialConsistency)
     {
-        return new DefaultQueryOptions(consistency, values, skipMetadata, new SpecificOptions(pageSize, pagingState, serialConsistency, -1L), 0);
+        return new DefaultQueryOptions(consistency, values, skipMetadata, new SpecificOptions(pageSize, pagingState, serialConsistency, -1L, false), 0);
     }
 
     public static QueryOptions addColumnSpecifications(QueryOptions options, List<ColumnSpecification> columnSpecs)
@@ -188,6 +188,11 @@ public abstract class QueryOptions
     public QueryOptions prepare(List<ColumnSpecification> specs)
     {
         return this;
+    }
+
+    public boolean isClientGeneratedTimestap()
+    {
+        return getSpecificOptions().clientGeneratedTimestamp;
     }
 
     static class DefaultQueryOptions extends QueryOptions
@@ -346,19 +351,21 @@ public abstract class QueryOptions
     // Options that are likely to not be present in most queries
     static class SpecificOptions
     {
-        private static final SpecificOptions DEFAULT = new SpecificOptions(-1, null, null, Long.MIN_VALUE);
+        private static final SpecificOptions DEFAULT = new SpecificOptions(-1, null, null, Long.MIN_VALUE, false);
 
         private final int pageSize;
         private final PagingState state;
         private final ConsistencyLevel serialConsistency;
         private final long timestamp;
+        private final boolean clientGeneratedTimestamp;
 
-        private SpecificOptions(int pageSize, PagingState state, ConsistencyLevel serialConsistency, long timestamp)
+        private SpecificOptions(int pageSize, PagingState state, ConsistencyLevel serialConsistency, long timestamp, boolean clientGeneratedTimestamp)
         {
             this.pageSize = pageSize;
             this.state = state;
             this.serialConsistency = serialConsistency == null ? ConsistencyLevel.SERIAL : serialConsistency;
             this.timestamp = timestamp;
+            this.clientGeneratedTimestamp = clientGeneratedTimestamp;
         }
     }
 
@@ -423,6 +430,7 @@ public abstract class QueryOptions
             flags.remove(Flag.SKIP_METADATA);
 
             SpecificOptions options = SpecificOptions.DEFAULT;
+            boolean clientGeneratedTimestamp = false;
             if (!flags.isEmpty())
             {
                 int pageSize = flags.contains(Flag.PAGE_SIZE) ? body.readInt() : -1;
@@ -435,9 +443,10 @@ public abstract class QueryOptions
                     if (ts == Long.MIN_VALUE)
                         throw new ProtocolException(String.format("Out of bound timestamp, must be in [%d, %d] (got %d)", Long.MIN_VALUE + 1, Long.MAX_VALUE, ts));
                     timestamp = ts;
+                    clientGeneratedTimestamp = true;
                 }
 
-                options = new SpecificOptions(pageSize, pagingState, serialConsistency, timestamp);
+                options = new SpecificOptions(pageSize, pagingState, serialConsistency, timestamp, clientGeneratedTimestamp);
             }
             DefaultQueryOptions opts = new DefaultQueryOptions(consistency, values, skipMetadata, options, version);
             return names == null ? opts : new OptionsWithNames(opts, names);
