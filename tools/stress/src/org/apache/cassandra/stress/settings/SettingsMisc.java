@@ -194,52 +194,35 @@ class SettingsMisc implements Serializable
 
     static Runnable helpHelpPrinter()
     {
-        return new Runnable()
-        {
-            @Override
-            public void run()
-            {
-                System.out.println("Usage: ./bin/cassandra-stress help <command|option>");
-                System.out.println("Commands:");
-                for (Command cmd : Command.values())
-                    System.out.println("    " + cmd.names.toString().replaceAll("\\[|\\]", ""));
-                System.out.println("Options:");
-                for (CliOption op : CliOption.values())
-                    System.out.println("    -" + op.toString().toLowerCase() + (op.extraName != null ? ", " + op.extraName : ""));
-            }
+        return () -> {
+            System.out.println("Usage: ./bin/cassandra-stress help <command|option>");
+            System.out.println("Commands:");
+            for (Command cmd : Command.values())
+                System.out.println("    " + cmd.names.toString().replaceAll("\\[|\\]", ""));
+            System.out.println("Options:");
+            for (CliOption op : CliOption.values())
+                System.out.println("    -" + op.toString().toLowerCase() + (op.extraName != null ? ", " + op.extraName : ""));
         };
     }
 
     static Runnable printHelpPrinter()
     {
-        return new Runnable()
+        return () -> GroupedOptions.printOptions(System.out, "print", new GroupedOptions()
         {
             @Override
-            public void run()
+            public List<? extends Option> options()
             {
-                GroupedOptions.printOptions(System.out, "print", new GroupedOptions()
-                {
-                    @Override
-                    public List<? extends Option> options()
-                    {
-                        return Arrays.asList(new OptionDistribution("dist=", null, "A mathematical distribution"));
-                    }
-                });
+                return Arrays.asList(new OptionDistribution("dist=", null, "A mathematical distribution"));
             }
-        };
+        });
     }
 
     static Runnable sendToDaemonHelpPrinter()
     {
-        return new Runnable()
-        {
-            @Override
-            public void run()
-            {
-                System.out.println("Usage: -sendToDaemon <host>");
-                System.out.println();
-                System.out.println("Specify a host running the stress server to send this stress command to");
-            }
+        return () -> {
+            System.out.println("Usage: -send-to <host>");
+            System.out.println();
+            System.out.println("Specify a host running the stress server to send this stress command to");
         };
     }
 
